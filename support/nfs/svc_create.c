@@ -117,7 +117,7 @@ svc_create_find_xprt(const struct sockaddr *bindaddr, const struct netconfig *nc
  */
 __attribute__((__malloc__))
 static struct addrinfo *
-svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
+svc_create_bindaddr(struct netconfig *nconf, const char *host, const uint16_t port)
 {
 	struct addrinfo *ai = NULL;
 	struct addrinfo hint = {
@@ -149,7 +149,7 @@ svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
 	}
 
 	(void)snprintf(buf, sizeof(buf), "%u", port);
-	error = getaddrinfo(NULL, buf, &hint, &ai);
+	error = getaddrinfo(host, buf, &hint, &ai);
 	if (error != 0) {
 		xlog(L_ERROR, "Failed to construct bind address: %s",
 			gai_strerror(error));
@@ -259,13 +259,14 @@ static unsigned int
 svc_create_nconf_rand_port(const char *name, const rpcprog_t program,
 		const rpcvers_t version,
 		void (*dispatch)(struct svc_req *, SVCXPRT *),
+		const char *host,
 		struct netconfig *nconf)
 {
 	struct t_bind bindaddr;
 	struct addrinfo *ai;
 	SVCXPRT	*xprt;
 
-	ai = svc_create_bindaddr(nconf, 0);
+	ai = svc_create_bindaddr(nconf, host, 0);
 	if (ai == NULL)
 		return 0;
 
@@ -328,12 +329,13 @@ static unsigned int
 svc_create_nconf_fixed_port(const char *name, const rpcprog_t program,
 		const rpcvers_t version,
 		void (*dispatch)(struct svc_req *, SVCXPRT *),
+		const char *host,
 		const uint16_t port, struct netconfig *nconf)
 {
 	struct addrinfo *ai;
 	SVCXPRT	*xprt;
 
-	ai = svc_create_bindaddr(nconf, port);
+	ai = svc_create_bindaddr(nconf, host, port);
 	if (ai == NULL)
 		return 0;
 
@@ -376,14 +378,15 @@ static unsigned int
 svc_create_nconf(const char *name, const rpcprog_t program,
 		const rpcvers_t version,
 		void (*dispatch)(struct svc_req *, SVCXPRT *),
+		const char *host,
 		const uint16_t port, struct netconfig *nconf)
 {
 	if (port != 0)
 		return svc_create_nconf_fixed_port(name, program,
-			version, dispatch, port, nconf);
+			version, dispatch, host, port, nconf);
 
 	return svc_create_nconf_rand_port(name, program,
-			version, dispatch, nconf);
+			version, dispatch, host, nconf);
 }
 
 /**
@@ -400,6 +403,7 @@ svc_create_nconf(const char *name, const rpcprog_t program,
 unsigned int
 nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 		void (*dispatch)(struct svc_req *, SVCXPRT *),
+		const char *host,
 		const uint16_t port)
 {
 	const struct sigaction create_sigaction = {
@@ -457,7 +461,7 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 			servport = port;
 
 		up += svc_create_nconf(name, program, version, dispatch,
-						servport, nconf);
+						host, servport, nconf);
 	}
 
 	if (visible == 0)
@@ -501,8 +505,18 @@ nfs_svc_unregister(const rpcprog_t program, const rpcvers_t version)
 unsigned int
 nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 		void (*dispatch)(struct svc_req *, SVCXPRT *),
+		const char *host,
 		const uint16_t port)
 {
+	// Not bothering to implement listen host setting without libtirpc
+	// because the one bundled with glibc does not even support IPv6,
+	// see e.g.
+	//     https://fedoraproject.org/wiki/Changes/SunRPCRemoval#Detailed_Description
+	if (host != NULL) {
+		xlog(L_ERROR, "Setting a host address is not supported without TI-RPC; address was: %s",
+			host);
+		return 0;
+	}
 	rpc_init(name, (int)program, (int)version, dispatch, (int)port);
 	return 1;
 }

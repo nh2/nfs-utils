@@ -511,7 +511,7 @@ int main (int argc, char **argv)
 	 * Create RPC listeners after dropping privileges.  This permits
 	 * statd to unregister its own listeners when it exits.
 	 */
-	if (nfs_svc_create("statd", SM_PROG, SM_VERS, sm_prog_1, port) == 0) {
+	if (nfs_svc_create("statd", SM_PROG, SM_VERS, sm_prog_1, NULL, port) == 0) {
 		xlog(L_ERROR, "failed to create RPC listeners, exiting");
 		exit(1);
 	}

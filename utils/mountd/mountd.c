@@ -63,6 +63,7 @@ static struct option longopts[] =
 	{ "nfs-version", 1, 0, 'V' },
 	{ "no-nfs-version", 1, 0, 'N' },
 	{ "version", 0, 0, 'v' },
+	{ "host", 1, 0, 'L' }, // 'h' and 'l' were already taken when this was added, so using 'L' for "Listen"
 	{ "port", 1, 0, 'p' },
 	{ "no-tcp", 0, 0, 'n' },
 	{ "ha-callout", 1, 0, 'H' },
@@ -591,6 +592,7 @@ get_exportlist(void)
 
 int	vers;
 int	port = 0;
+char	*host = NULL;
 int	descriptors = 0;
 
 inline static void 
@@ -605,6 +607,7 @@ read_mountd_conf(char **argv)
 	manage_gids = conf_get_bool("mountd", "manage-gids", manage_gids);
 	descriptors = conf_get_num("mountd", "descriptors", descriptors);
 	port = conf_get_num("mountd", "port", port);
+	host = conf_get_str("mountd", "host");
 	num_threads = conf_get_num("mountd", "threads", num_threads);
 	reverse_resolve = conf_get_bool("mountd", "reverse-lookup", reverse_resolve);
 	ha_callout_prog = conf_get_str("mountd", "ha-callout");
@@ -689,6 +692,9 @@ main(int argc, char **argv)
 			usage(progname, 0);
 			break;
 		case 'P':	/* XXX for nfs-server compatibility */
+		case 'L':
+			host = optarg;
+			break;
 		case 'p':
 			port = atoi(optarg);
 			if (port <= 0 || port > 65535) {
@@ -798,13 +804,13 @@ main(int argc, char **argv)
 	unregister_services();
 	if (version2()) {
 		listeners += nfs_svc_create("mountd", MOUNTPROG,
-					MOUNTVERS, mount_dispatch, port);
+					MOUNTVERS, mount_dispatch, host, port);
 		listeners += nfs_svc_create("mountd", MOUNTPROG,
-					MOUNTVERS_POSIX, mount_dispatch, port);
+					MOUNTVERS_POSIX, mount_dispatch, host, port);
 	}
 	if (version3())
 		listeners += nfs_svc_create("mountd", MOUNTPROG,
-					MOUNTVERS_NFSV3, mount_dispatch, port);
+					MOUNTVERS_NFSV3, mount_dispatch, host, port);
 	if (version23() && listeners == 0)
 		xlog(L_WARNING, "mountd: No V2 or V3 listeners created!");
 
@@ -878,7 +884,7 @@ usage(const char *prog, int n)
 "Usage: %s [-F|--foreground] [-h|--help] [-v|--version] [-d kind|--debug kind]\n"
 "	[-l|--log-auth] [-i|--cache-use-ipaddr] [-T|--ttl ttl]\n"
 "	[-o num|--descriptors num]\n"
-"	[-p|--port port] [-V version|--nfs-version version]\n"
+"	[-L|--host addr] [-p|--port port] [-V version|--nfs-version version]\n"
 "	[-N version|--no-nfs-version version] [-n|--no-tcp]\n"
 "	[-H prog |--ha-callout prog] [-r |--reverse-lookup]\n"
 "	[-s|--state-directory-path path] [-g|--manage-gids]\n"

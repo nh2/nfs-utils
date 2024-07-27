@@ -443,7 +443,7 @@ static void daemon_simulator(void)
 	signal(SIGINT, sim_killer);
 	signal(SIGTERM, sim_killer);
 	/* FIXME: allow for different versions? */
-	nfs_svc_create("nlmsim", NLM_SM_PROG, NLM_SM_VERS4, nlm_sm_prog_4, 0);
+	nfs_svc_create("nlmsim", NLM_SM_PROG, NLM_SM_VERS4, nlm_sm_prog_4, NULL, 0);
 	svc_run();
 }
 

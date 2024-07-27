@@ -46,6 +46,7 @@ void		nfs_svc_unregister(const rpcprog_t program,
 unsigned int	nfs_svc_create(char *name, const rpcprog_t program,
 				const rpcvers_t version,
 				void (*dispatch)(struct svc_req *, SVCXPRT *),
+				const char *host,
 				const uint16_t port);
 void		rpc_init(char *name, int prog, int vers,
 				void (*dispatch)(struct svc_req *, SVCXPRT *),
